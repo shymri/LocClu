@@ -1,0 +1,81 @@
+##quick locator cluster situation
+
+'''
+figure out (how to) correct placement for controls
+'''
+import maya.cmds as mc
+def ccCube():
+    #top
+    mc.curve( point=[(-0.5,0.5,0.5), (0.5,0.5,0.5)], knot=[0,1], degree=1, name= name + '_cc_01')
+    mc.curve( point=[(-0.5,0.5,-0.5), (0.5,0.5,-0.5)], knot=[0,1], degree=1, name= name + '_1_cc_01' )
+    mc.curve( point=[(-0.5,0.5,0.5), (-0.5,0.5,-0.5)], knot=[0,1], degree=1, name= name + '_2_cc_01' )
+    mc.curve( point=[(0.5,0.5,-0.5), (0.5,0.5,0.5)], knot=[0,1], degree=1, name= name + '_3_cc_01' )
+    #bottom
+    mc.curve( point=[(-0.5,-0.5,0.5), (0.5,-0.5,0.5)], knot=[0,1], degree=1, name= name + '_4_cc_01' )
+    mc.curve( point=[(-0.5,-0.5,-0.5), (0.5,-0.5,-0.5)], knot=[0,1], degree=1, name= name + '_5_cc_01' )
+    mc.curve( point=[(-0.5,-0.5,0.5), (-0.5,-0.5,-0.5)], knot=[0,1], degree=1, name= name + '_6_cc_01' )
+    mc.curve( point=[(0.5,-0.5,-0.5), (0.5,-0.5,0.5)], knot=[0,1], degree=1, name= name + '_7_cc_01' )
+    #sides
+    mc.curve( point=[(-0.5,-0.5,0.5), (-0.5,0.5,0.5)], knot=[0,1], degree=1, name= name + '_8_cc_01' )
+    mc.curve( point=[(-0.5,-0.5,-0.5), (-0.5,0.5,-0.5)], knot=[0,1], degree=1, name= name + '_9_cc_01' )
+    mc.curve( point=[(0.5,-0.5,0.5), (0.5,0.5,0.5)], knot=[0,1], degree=1, name= name + '_10_cc_01' )
+    mc.curve( point=[(0.5,-0.5,-0.5), (0.5,0.5,-0.5)], knot=[0,1], degree=1, name= name + '_11_cc_01' )
+    #combine
+    control_object = name + '_cc_01'
+    for number in range(1,12):
+    	mc.parent( mc.listRelatives( name + '_' + str(number) + '_cc_01', shapes=True ), control_object, relative=True, shape=True)
+    	mc.delete(name + '_' + str(number) + '_cc_01')
+    control_shapes = mc.listRelatives( control_object, shapes=True )
+    for control_shape in control_shapes:
+        mc.setAttr( control_shape + '.overrideEnabled', True)
+        if 'LFT' in part:
+            mc.setAttr( control_shape + '.overrideColor', 6 )
+            if 'settings' in str(control_object) or 'secondary' in str(control_object) or 'ribbon' in str(control_object):
+                mc.setAttr( control_shape + '.overrideColor', 15 )
+        elif 'RGT' in part:
+            mc.setAttr( control_shape + '.overrideColor', 13 )
+            if 'settings' in str(control_object) or 'secondary' in str(control_object) or 'ribbon' in str(control_object):
+                mc.setAttr( control_shape + '.overrideColor', 12 )
+        else:
+            mc.setAttr( control_shape + '.overrideColor', 22 )
+            if 'settings' in str(control_object) or 'secondary' in str(control_object) or 'ribbon' in str(control_object):
+                mc.setAttr( control_shape + '.overrideColor', 25 ) 
+                
+    #create offset group
+    mc.rename(name + '_cc_01', clu + '_LOC_cc_01')
+    mc.group(n=clu+'_LOC_cc_os_grp_01')
+    mc.scale(.5,.5,.5,r=True)
+
+clus = mc.ls(sl = True)
+test = clus[0].split('_')
+name = test[0] + '_'
+part = test[2] + '_' + test[1]
+
+#create groups for locators
+if not mc.objExists(name + 'cluster_locators_grp_01'):
+    mc.group(n = name + 'cluster_locators_grp_01', empty = True)
+    mc.parent(name + 'cluster_locators_grp_01', name + 'no_transform_hidden_GRP_01')
+mc.group(n = name + part + '_LOC_GRP_01', empty = True)
+mc.parent(name + part + '_LOC_GRP_01', name + 'cluster_locators_grp_01')
+
+for clu in clus:
+    cluStrip = clu.rstrip('Handle')
+    
+    #create locators and parent within rig
+    mc.spaceLocator(n = clu + '_LOC_01')
+    mc.group(clu + '_LOC_01', n = clu + '_LOC_os_grp_01')
+    mc.delete(mc.pointConstraint(clu, clu + '_LOC_os_grp_01', mo = False))
+    mc.parent(clu + '_LOC_os_grp_01', name + part + '_LOC_GRP_01')
+    
+    #connect loc to cluster
+    mc.cluster(clu, e = True, bs = 1, wn=(clu + '_LOC_01', clu + '_LOC_01'))
+    
+    #create cc, position and parent into rig
+    ccCube()
+    mc.parent(clu + '_LOC_cc_os_grp_01', name + part + '_Gonzo_controls_grp_01')
+    mc.delete(mc.pointConstraint(clu, clu + '_LOC_cc_os_grp_01'))
+    
+    #direct connect cc to loc
+    mc.connectAttr(clu + '_LOC_cc_01.translate', clu + '_LOC_01.translate',f=True)
+    mc.connectAttr(clu + '_LOC_cc_01.rotate', clu + '_LOC_01.rotate',f=True)
+    mc.connectAttr(clu + '_LOC_cc_01.scale', clu + '_LOC_01.scale',f=True)
